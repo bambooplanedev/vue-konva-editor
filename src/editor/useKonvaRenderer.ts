@@ -18,6 +18,9 @@ const nodes = new Map<string, Konva.Shape>();
 // is skipped for it so the reconciler never fights an in-flight gesture.
 const gesturing = new Set<string>();
 
+const imageCache = new Map<string, HTMLImageElement>();
+const pendingImages = new Set<string>();
+
 function baseAttrs(obj: SceneObject): Konva.NodeConfig {
   return {
     x: obj.x,
@@ -41,8 +44,7 @@ function attrsFor(obj: SceneObject): Konva.NodeConfig {
     case 'text':
       return { ...base, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Manrope' };
     case 'image':
-      // Image element attachment is added in Task 8.
-      return { ...base, width: obj.width, height: obj.height };
+      return { ...base, width: obj.width, height: obj.height, image: imageCache.get(obj.src) };
   }
 }
 
@@ -179,6 +181,7 @@ export function mountRenderer(container: HTMLDivElement): () => void {
   function reconcile(): void {
     const seen = new Set<string>();
     state.objects.forEach((obj, index) => {
+      if (obj.type === 'image') ensureImage(obj.src);
       seen.add(obj.id);
       let node = nodes.get(obj.id);
       if (!node) {
@@ -198,6 +201,21 @@ export function mountRenderer(container: HTMLDivElement): () => void {
     }
     syncSelection();
     stage!.batchDraw();
+  }
+
+  function ensureImage(src: string): void {
+    if (imageCache.has(src) || pendingImages.has(src)) return;
+    pendingImages.add(src);
+    const img = new Image();
+    img.onload = () => {
+      pendingImages.delete(src);
+      imageCache.set(src, img);
+      // Re-reconcile: idempotent; nodes whose object was deleted meanwhile
+      // no longer exist, so nothing resurrects.
+      reconcile();
+    };
+    img.onerror = () => pendingImages.delete(src);
+    img.src = src;
   }
 
   function fit(): void {
