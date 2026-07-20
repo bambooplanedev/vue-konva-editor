@@ -5,7 +5,7 @@ import { useHistory } from '../editor/useHistory';
 import type { ObjectType } from '../editor/types';
 import { parseSceneFile, serializeScene } from '../editor/serialize';
 import { downloadDataURL, downloadText } from '../editor/download';
-import { exportStagePNG } from '../editor/useKonvaRenderer';
+import { exportStagePNG, fitView, zoom, zoomIn, zoomOut } from '../editor/useKonvaRenderer';
 import { showToast } from '../editor/toast';
 
 const { state, addShape, toggleGrid, addImage, currentSnapshot, replaceScene, select } = useEditorScene();
@@ -97,6 +97,12 @@ function exportPNG(): void {
       <button :disabled="!history.canRedo.value" @click="history.redo()" title="Redo">↷</button>
     </div>
     <div class="group">
+      <button title="Zoom out" @click="zoomOut">−</button>
+      <span class="zoom-label">{{ Math.round(zoom * 100) }}%</span>
+      <button title="Zoom in" @click="zoomIn">+</button>
+      <button title="Fit artboard to window" @click="fitView">Fit</button>
+    </div>
+    <div class="group">
       <button @click="exportJSON">JSON ⇩</button>
       <button @click="jsonInput?.click()">JSON ⇧</button>
       <input ref="jsonInput" type="file" accept=".json,application/json" hidden @change="onJSONFile" />
@@ -156,5 +162,11 @@ function exportPNG(): void {
   color: var(--bp-offwhite);
   border: 1px solid var(--bp-border);
   border-radius: 4px;
+}
+.zoom-label {
+  min-width: 44px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 </style>

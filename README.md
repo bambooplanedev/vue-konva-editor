@@ -11,6 +11,7 @@ Live demo: https://bambooplanedev.github.io/vue-konva-editor/
 - rect / circle / line / text / image primitives — select, drag, resize, rotate
 - layers panel: z-order, visibility, lock, two-way selection sync with the canvas
 - snap-to-grid on a fixed 900×600 artboard
+- zoom to pointer and pan (the official Konva stage-transform pattern), fit-to-view
 - snapshot-based undo/redo (50-snapshot history)
 - export/import to a versioned JSON schema — `serialize(parse(serialize(scene)))`
   is byte-identical, enforced by tests
