@@ -11,7 +11,7 @@ Live demo: https://bambooplanedev.github.io/vue-konva-editor/
 - rect / circle / line / text / image primitives — select, drag, resize, rotate
 - layers panel: z-order, visibility, lock, two-way selection sync with the canvas
 - snap-to-grid on a fixed 900×600 artboard
-- snapshot-based undo/redo (50 steps)
+- snapshot-based undo/redo (50-snapshot history)
 - export/import to a versioned JSON schema — `serialize(parse(serialize(scene)))`
   is byte-identical, enforced by tests
 - PNG export at 1x/2x
@@ -36,7 +36,7 @@ npm run dev
 npm test
 ```
 
-Four suites protect the core claims: lossless canonical round-trip,
+The tests protect four core claims: lossless canonical round-trip,
 undo/redo semantics (cap, redo invalidation), transform baking math per
 object type, and import validation.
 
