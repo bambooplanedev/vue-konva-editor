@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted } from 'vue';
 import EditorCanvas from './components/EditorCanvas.vue';
 import EditorToolbar from './components/EditorToolbar.vue';
+import LayersPanel from './components/LayersPanel.vue';
 import { useEditorScene } from './editor/useEditorScene';
 import { useHistory } from './editor/useHistory';
 
@@ -38,7 +39,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
     <main class="main">
       <EditorCanvas />
       <aside class="sidebar">
-        <!-- LayersPanel (Task 7) and InspectorPanel (Task 8) mount here -->
+        <LayersPanel />
+        <!-- InspectorPanel (Task 8) mounts here -->
       </aside>
     </main>
   </div>
