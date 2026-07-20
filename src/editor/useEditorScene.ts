@@ -3,10 +3,15 @@ import { createImage, createShape, round2 } from './objects';
 import type { SpawnPoint } from './objects';
 import { ARTBOARD, GRID_STEP } from './types';
 import type {
+  CircleObject,
   GridSettings,
+  ImageObject,
+  LineObject,
   ObjectType,
+  RectObject,
   SceneObject,
   SceneSnapshot,
+  TextObject,
 } from './types';
 
 export interface EditorState {
@@ -15,8 +20,12 @@ export interface EditorState {
   selectedId: string | null;
 }
 
-/** Loose patch: any subset of any variant's fields (never id/type). */
-export type ObjectPatch = Record<string, unknown>;
+/** Any subset of any variant's fields (never id/type). */
+export type ObjectPatch = Partial<Omit<RectObject, 'id' | 'type'>> &
+  Partial<Omit<CircleObject, 'id' | 'type'>> &
+  Partial<Omit<LineObject, 'id' | 'type'>> &
+  Partial<Omit<TextObject, 'id' | 'type'>> &
+  Partial<Omit<ImageObject, 'id' | 'type'>>;
 
 const state = reactive<EditorState>({
   objects: [],

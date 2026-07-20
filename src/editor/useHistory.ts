@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import type { SceneSnapshot } from './types';
+import { serializeScene } from './serialize';
 import { useEditorScene } from './useEditorScene';
 
 const MAX_HISTORY = 50;
@@ -31,23 +32,19 @@ export function useHistory() {
     },
 
     undo(): void {
-      if (past.length < 2) return;
+      if (past.length === 0) return;
       const current = currentSnapshot();
-      const lastCommitted = past[past.length - 1]!;
-
-      // Check if current state differs from last committed state (uncommitted mutations)
-      const hasUncommittedChanges = JSON.stringify({objects: current.objects, grid: current.grid}) !==
-                                    JSON.stringify({objects: lastCommitted.objects, grid: lastCommitted.grid});
-
-      if (hasUncommittedChanges) {
-        // Current state has uncommitted mutations: just restore to last committed, preserve it in future
-        future.push(current);
-        replaceScene(lastCommitted);
-      } else {
-        // Current state matches last commit: undo to previous commit
-        future.push(past.pop()!);
-        replaceScene(past[past.length - 1]!);
+      const top = past[past.length - 1]!;
+      if (serializeScene(current) !== serializeScene(top)) {
+        // Uncommitted changes: undo cancels them by restoring the last
+        // committed state. Stacks stay untouched so redo still works.
+        replaceScene(top);
+        sync();
+        return;
       }
+      if (past.length < 2) return;
+      future.push(past.pop()!);
+      replaceScene(past[past.length - 1]!);
       sync();
     },
 

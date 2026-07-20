@@ -81,6 +81,20 @@ describe('undo/redo', () => {
     history.undo();
     expect(scene.state.objects[0]!.x).toBe(xAfterUndo);
   });
+
+  it('undo discards uncommitted changes and keeps redo intact', () => {
+    const rect = scene.addShape('rect');
+    history.commit();
+    scene.updateObject(rect.id, { x: 500 });
+    history.commit();
+    history.undo();
+    const committedX = scene.state.objects[0]!.x;
+    scene.updateObject(rect.id, { x: 999 });
+    history.undo();
+    expect(scene.state.objects[0]!.x).toBe(committedX);
+    history.redo();
+    expect(scene.state.objects[0]!.x).toBe(500);
+  });
 });
 
 describe('scene mutations', () => {
