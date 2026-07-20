@@ -13,7 +13,7 @@ const { state, removeObject } = useEditorScene();
 
 function onKeydown(e: KeyboardEvent): void {
   const target = e.target as HTMLElement;
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) return;
 
   if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedId) {
     e.preventDefault();

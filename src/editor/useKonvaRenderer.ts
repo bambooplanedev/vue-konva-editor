@@ -208,6 +208,7 @@ export function mountRenderer(container: HTMLDivElement): () => void {
     pendingImages.add(src);
     const img = new Image();
     img.onload = () => {
+      if (!stage) { pendingImages.delete(src); return; }
       pendingImages.delete(src);
       imageCache.set(src, img);
       // Re-reconcile: idempotent; nodes whose object was deleted meanwhile

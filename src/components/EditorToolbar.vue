@@ -68,7 +68,11 @@ function onJSONFile(e: Event): void {
 }
 
 function exportPNG(): void {
-  downloadDataURL('scene.png', exportStagePNG(Number(pngScale.value) as 1 | 2));
+  try {
+    downloadDataURL('scene.png', exportStagePNG(Number(pngScale.value) as 1 | 2));
+  } catch {
+    showToast('PNG export failed');
+  }
 }
 </script>
 
