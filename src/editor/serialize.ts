@@ -79,7 +79,7 @@ function isSceneObject(v: unknown): v is SceneObject {
     case 'text':
       return isStr(o.text) && isFin(o.fontSize) && isStr(o.fill);
     case 'image':
-      return isStr(o.src) && isFin(o.width) && isFin(o.height);
+      return isStr(o.src) && o.src.startsWith('data:image/') && isFin(o.width) && isFin(o.height);
     default:
       return false;
   }
@@ -116,6 +116,11 @@ export function parseSceneFile(json: string): SceneSnapshot {
       throw new Error(`Invalid object at index ${i}`);
     }
   });
+  const ids = new Set<string>();
+  for (const o of d.objects as SceneObject[]) {
+    if (ids.has(o.id)) throw new Error(`Duplicate object id "${o.id}"`);
+    ids.add(o.id);
+  }
   return {
     grid: { enabled: d.grid.enabled, size: d.grid.size },
     objects: (d.objects as SceneObject[]).map(canonicalObject),

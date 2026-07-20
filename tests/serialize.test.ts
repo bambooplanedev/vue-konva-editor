@@ -69,4 +69,12 @@ describe('parse rejection', () => {
   it('rejects missing grid', () => {
     expect(() => parseSceneFile(fileOf((d) => delete d.grid))).toThrow(/grid/i);
   });
+
+  it('rejects image src that is not a data URL', () => {
+    expect(() => parseSceneFile(fileOf((d) => (d.objects[4].src = 'https://example.com/x.png')))).toThrow(/index 4/i);
+  });
+
+  it('rejects duplicate object ids', () => {
+    expect(() => parseSceneFile(fileOf((d) => (d.objects[1].id = d.objects[0].id)))).toThrow(/duplicate/i);
+  });
 });
