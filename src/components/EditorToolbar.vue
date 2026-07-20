@@ -12,7 +12,6 @@ const { state, addShape, toggleGrid, addImage, currentSnapshot, replaceScene, se
 const history = useHistory();
 const fileInput = ref<HTMLInputElement | null>(null);
 const jsonInput = ref<HTMLInputElement | null>(null);
-const pngScale = ref<'1' | '2'>('1');
 
 function add(type: Exclude<ObjectType, 'image'>): void {
   addShape(type);
@@ -69,7 +68,7 @@ function onJSONFile(e: Event): void {
 
 function exportPNG(): void {
   try {
-    downloadDataURL('scene.png', exportStagePNG(Number(pngScale.value) as 1 | 2));
+    downloadDataURL('scene.png', exportStagePNG(2));
   } catch {
     showToast('PNG export failed');
   }
@@ -106,10 +105,6 @@ function exportPNG(): void {
       <button @click="exportJSON">JSON ⇩</button>
       <button @click="jsonInput?.click()">JSON ⇧</button>
       <input ref="jsonInput" type="file" accept=".json,application/json" hidden @change="onJSONFile" />
-      <select v-model="pngScale" title="PNG scale">
-        <option value="1">PNG 1x</option>
-        <option value="2">PNG 2x</option>
-      </select>
       <button @click="exportPNG">PNG ⇩</button>
     </div>
   </header>
@@ -155,13 +150,6 @@ function exportPNG(): void {
   gap: 6px;
   font-size: 13px;
   cursor: pointer;
-}
-.toolbar select {
-  height: 30px;
-  background: var(--bp-charcoal);
-  color: var(--bp-offwhite);
-  border: 1px solid var(--bp-border);
-  border-radius: 4px;
 }
 .zoom-label {
   min-width: 44px;

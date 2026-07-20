@@ -15,7 +15,7 @@ Live demo: https://bambooplanedev.github.io/vue-konva-editor/
 - snapshot-based undo/redo (50-snapshot history)
 - export/import to a versioned JSON schema — `serialize(parse(serialize(scene)))`
   is byte-identical, enforced by tests
-- PNG export at 1x/2x
+- PNG export (2x for retina)
 
 The interesting part is the architecture, not the widget list: the whole scene
 lives in one plain-data model, and the Konva stage is reconciled from it. That
