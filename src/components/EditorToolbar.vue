@@ -101,8 +101,8 @@ function exportPNG(): void {
       <button @click="jsonInput?.click()">JSON ⇧</button>
       <input ref="jsonInput" type="file" accept=".json,application/json" hidden @change="onJSONFile" />
       <select v-model="pngScale" title="PNG scale">
-        <option value="1">1x</option>
-        <option value="2">2x</option>
+        <option value="1">PNG 1x</option>
+        <option value="2">PNG 2x</option>
       </select>
       <button @click="exportPNG">PNG ⇩</button>
     </div>
