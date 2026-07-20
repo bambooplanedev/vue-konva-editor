@@ -63,6 +63,7 @@ export function zoomOut(): void {
 /** Fit and center the artboard in the stage; re-enables auto-fit on resize. */
 export function fitView(): void {
   if (!stage) return;
+  if (stage.width() === 0 || stage.height() === 0) return;
   const scale = Math.min(
     1,
     stage.width() / ARTBOARD.width,
@@ -179,15 +180,17 @@ export function mountRenderer(container: HTMLDivElement): () => void {
     if (!stage) return;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
-    let direction = e.evt.deltaY > 0 ? -1 : 1;
-    // Trackpad pinch reports ctrlKey; revert direction (Konva docs pattern).
-    if (e.evt.ctrlKey) direction = -direction;
+    // deltaY < 0 zooms in — correct for both wheel scroll and trackpad
+    // pinch (pinch-spread reports ctrlKey with negative deltaY).
+    const direction = e.evt.deltaY > 0 ? -1 : 1;
     const oldScale = stage.scaleX();
     applyZoom(direction > 0 ? oldScale * WHEEL_SCALE_BY : oldScale / WHEEL_SCALE_BY, pointer);
   });
 
-  stage.on('dragend', (e) => {
+  stage.on('dragstart', (e) => {
     // Node drags bubble here too — only a stage drag (pan) is a view change.
+    // Set at drag START so a container resize mid-pan cannot auto-refit
+    // and fight the gesture.
     if (e.target === stage) manualView = true;
   });
 
