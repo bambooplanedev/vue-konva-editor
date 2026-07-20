@@ -22,13 +22,10 @@ onBeforeUnmount(() => cleanup?.());
   flex: 1;
   min-width: 0;
   min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
-  padding: 16px;
 }
 .stage-container {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
 }
 </style>

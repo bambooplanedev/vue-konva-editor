@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 import { round2 } from './objects';
 import { applyTransform } from './transform';
 import { ARTBOARD } from './types';
@@ -20,6 +20,63 @@ const gesturing = new Set<string>();
 
 const imageCache = new Map<string, HTMLImageElement>();
 const pendingImages = new Set<string>();
+
+// Ephemeral view state: never part of the model, history, or JSON.
+export const zoom = ref(1);
+let manualView = false;
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
+const WHEEL_SCALE_BY = 1.05;
+const BUTTON_SCALE_BY = 1.2;
+
+/** Scale the view to `newScale` (clamped), keeping `center` (in screen
+ *  coordinates) anchored. Marks the view as manually adjusted. */
+function applyZoom(newScale: number, center: { x: number; y: number }): void {
+  if (!stage) return;
+  const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newScale));
+  const oldScale = stage.scaleX();
+  const pointTo = {
+    x: (center.x - stage.x()) / oldScale,
+    y: (center.y - stage.y()) / oldScale,
+  };
+  stage.scale({ x: clamped, y: clamped });
+  stage.position({
+    x: center.x - pointTo.x * clamped,
+    y: center.y - pointTo.y * clamped,
+  });
+  zoom.value = clamped;
+  manualView = true;
+  stage.batchDraw();
+}
+
+export function zoomIn(): void {
+  if (!stage) return;
+  applyZoom(stage.scaleX() * BUTTON_SCALE_BY, { x: stage.width() / 2, y: stage.height() / 2 });
+}
+
+export function zoomOut(): void {
+  if (!stage) return;
+  applyZoom(stage.scaleX() / BUTTON_SCALE_BY, { x: stage.width() / 2, y: stage.height() / 2 });
+}
+
+/** Fit and center the artboard in the stage; re-enables auto-fit on resize. */
+export function fitView(): void {
+  if (!stage) return;
+  const scale = Math.min(
+    1,
+    stage.width() / ARTBOARD.width,
+    stage.height() / ARTBOARD.height,
+  );
+  stage.scale({ x: scale, y: scale });
+  stage.position({
+    x: (stage.width() - ARTBOARD.width * scale) / 2,
+    y: (stage.height() - ARTBOARD.height * scale) / 2,
+  });
+  zoom.value = scale;
+  manualView = false;
+  stage.batchDraw();
+}
 
 function baseAttrs(obj: SceneObject): Konva.NodeConfig {
   return {
@@ -68,15 +125,28 @@ export function mountRenderer(container: HTMLDivElement): () => void {
   const { state, select, updateObject, replaceObject } = useEditorScene();
   const history = useHistory();
 
+  const wrap = container.parentElement!;
   stage = new Konva.Stage({
     container,
-    width: ARTBOARD.width,
-    height: ARTBOARD.height,
+    width: wrap.clientWidth,
+    height: wrap.clientHeight,
+    draggable: true,
   });
+  manualView = false;
 
   const gridLayer = new Konva.Layer({ listening: false });
   gridLayer.add(
-    new Konva.Rect({ x: 0, y: 0, width: ARTBOARD.width, height: ARTBOARD.height, fill: '#ffffff' }),
+    new Konva.Rect({
+      x: 0,
+      y: 0,
+      width: ARTBOARD.width,
+      height: ARTBOARD.height,
+      fill: '#ffffff',
+      shadowColor: '#000000',
+      shadowOpacity: 0.35,
+      shadowBlur: 18,
+      shadowOffset: { x: 0, y: 4 },
+    }),
   );
   gridGroup = new Konva.Group();
   gridLayer.add(gridGroup);
@@ -102,6 +172,23 @@ export function mountRenderer(container: HTMLDivElement): () => void {
     const id = e.target.id();
     const obj = state.objects.find((o) => o.id === id);
     if (obj && !obj.locked) select(id);
+  });
+
+  stage.on('wheel', (e) => {
+    e.evt.preventDefault();
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    let direction = e.evt.deltaY > 0 ? -1 : 1;
+    // Trackpad pinch reports ctrlKey; revert direction (Konva docs pattern).
+    if (e.evt.ctrlKey) direction = -direction;
+    const oldScale = stage.scaleX();
+    applyZoom(direction > 0 ? oldScale * WHEEL_SCALE_BY : oldScale / WHEEL_SCALE_BY, pointer);
+  });
+
+  stage.on('dragend', (e) => {
+    // Node drags bubble here too — only a stage drag (pan) is a view change.
+    if (e.target === stage) manualView = true;
   });
 
   function attachEvents(node: Konva.Shape): void {
@@ -219,27 +306,21 @@ export function mountRenderer(container: HTMLDivElement): () => void {
     img.src = src;
   }
 
-  function fit(): void {
-    const wrap = container.parentElement!;
-    const scale = Math.min(
-      1,
-      wrap.clientWidth / ARTBOARD.width,
-      wrap.clientHeight / ARTBOARD.height,
-    );
-    stage!.size({ width: ARTBOARD.width * scale, height: ARTBOARD.height * scale });
-    stage!.scale({ x: scale, y: scale });
-    stage!.batchDraw();
+  function onResize(): void {
+    stage!.size({ width: wrap.clientWidth, height: wrap.clientHeight });
+    if (manualView) stage!.batchDraw();
+    else fitView();
   }
 
-  const resizeObserver = new ResizeObserver(fit);
-  resizeObserver.observe(container.parentElement!);
+  const resizeObserver = new ResizeObserver(onResize);
+  resizeObserver.observe(wrap);
 
   const stopScene = watch(() => state, reconcile, { deep: true });
   const stopGrid = watch(() => [state.grid.enabled, state.grid.size], drawGrid);
 
   drawGrid();
   reconcile();
-  fit();
+  onResize();
 
   return () => {
     stopScene();
@@ -248,16 +329,24 @@ export function mountRenderer(container: HTMLDivElement): () => void {
     nodes.clear();
     gesturing.clear();
     stage?.destroy();
+    zoom.value = 1;
+    manualView = false;
     stage = null;
   };
 }
 
 export function exportStagePNG(pixelRatio: 1 | 2): string {
   if (!stage) throw new Error('Stage is not mounted');
-  const prev = { scale: stage.scaleX(), width: stage.width(), height: stage.height() };
+  const prev = {
+    scale: stage.scaleX(),
+    width: stage.width(),
+    height: stage.height(),
+    position: stage.position(),
+  };
   gridGroup.visible(false);
   overlayLayer.visible(false);
   stage.scale({ x: 1, y: 1 });
+  stage.position({ x: 0, y: 0 });
   stage.size({ width: ARTBOARD.width, height: ARTBOARD.height });
   try {
     return stage.toDataURL({ pixelRatio });
@@ -265,6 +354,7 @@ export function exportStagePNG(pixelRatio: 1 | 2): string {
     gridGroup.visible(true);
     overlayLayer.visible(true);
     stage.scale({ x: prev.scale, y: prev.scale });
+    stage.position(prev.position);
     stage.size({ width: prev.width, height: prev.height });
     stage.batchDraw();
   }
