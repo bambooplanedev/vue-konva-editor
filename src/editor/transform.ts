@@ -22,13 +22,13 @@ export function applyTransform(obj: SceneObject, t: TransformPatch): SceneObject
       return {
         ...obj,
         ...moved,
-        width: round2(Math.max(5, obj.width * t.scaleX)),
-        height: round2(Math.max(5, obj.height * t.scaleY)),
+        width: round2(Math.max(5, Math.abs(obj.width * t.scaleX))),
+        height: round2(Math.max(5, Math.abs(obj.height * t.scaleY))),
       };
     case 'circle':
-      return { ...obj, ...moved, radius: round2(Math.max(3, obj.radius * t.scaleX)) };
+      return { ...obj, ...moved, radius: round2(Math.max(3, Math.abs(obj.radius * t.scaleX))) };
     case 'text':
-      return { ...obj, ...moved, fontSize: round2(Math.max(6, obj.fontSize * t.scaleY)) };
+      return { ...obj, ...moved, fontSize: round2(Math.max(6, Math.abs(obj.fontSize * t.scaleY))) };
     case 'line':
       return {
         ...obj,

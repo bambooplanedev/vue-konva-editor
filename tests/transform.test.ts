@@ -93,4 +93,13 @@ describe('applyTransform', () => {
     applyTransform(rect, { x: 0, y: 0, rotation: 0, scaleX: 3, scaleY: 3 });
     expect(JSON.stringify(rect)).toBe(before);
   });
+
+  it('uses scale magnitude when the transformer flips a shape', () => {
+    const out = applyTransform(rect, { x: 10, y: 20, rotation: 0, scaleX: -1.5, scaleY: -2 });
+    expect(out).toMatchObject({ width: 150, height: 100 });
+    const flippedText = applyTransform(text, { x: 10, y: 20, rotation: 0, scaleX: -2, scaleY: -2 });
+    expect(flippedText).toMatchObject({ fontSize: 48 });
+    const flippedCircle = applyTransform(circle, { x: 10, y: 20, rotation: 0, scaleX: -1.5, scaleY: -1.5 });
+    expect(flippedCircle).toMatchObject({ radius: 60 });
+  });
 });
