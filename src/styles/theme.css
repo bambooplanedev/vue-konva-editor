@@ -1,0 +1,25 @@
+:root {
+  --bp-green: #4CAF50;
+  --bp-green-deep: #256325;
+  --bp-green-forest: #2f6b2f;
+  --bp-orange: #f0a830;
+  --bp-charcoal: #1a1a1a;
+  --bp-offwhite: #f7f7f5;
+  --bp-white: #ffffff;
+  --bp-surface: #232323;
+  --bp-border: #3a3a3a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Manrope', system-ui, sans-serif;
+  background: var(--bp-charcoal);
+  color: var(--bp-offwhite);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
