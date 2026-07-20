@@ -103,6 +103,8 @@ textarea {
   border: 1px solid var(--bp-border);
   border-radius: 4px;
   padding: 4px 6px;
+  width: 100%;
+  min-width: 0;
 }
 input[type='color'] {
   padding: 1px;
