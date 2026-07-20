@@ -6,6 +6,7 @@ import LayersPanel from './components/LayersPanel.vue';
 import InspectorPanel from './components/InspectorPanel.vue';
 import { useEditorScene } from './editor/useEditorScene';
 import { useHistory } from './editor/useHistory';
+import { toastMessage } from './editor/toast';
 
 const history = useHistory();
 const { state, removeObject } = useEditorScene();
@@ -44,6 +45,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
         <InspectorPanel />
       </aside>
     </main>
+    <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
   </div>
 </template>
 
@@ -66,5 +68,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   background: var(--bp-surface);
   border-left: 1px solid var(--bp-border);
   overflow-y: auto;
+}
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bp-orange);
+  color: var(--bp-charcoal);
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>

@@ -3,10 +3,16 @@ import { ref } from 'vue';
 import { useEditorScene } from '../editor/useEditorScene';
 import { useHistory } from '../editor/useHistory';
 import type { ObjectType } from '../editor/types';
+import { parseSceneFile, serializeScene } from '../editor/serialize';
+import { downloadDataURL, downloadText } from '../editor/download';
+import { exportStagePNG } from '../editor/useKonvaRenderer';
+import { showToast } from '../editor/toast';
 
-const { state, addShape, toggleGrid, addImage } = useEditorScene();
+const { state, addShape, toggleGrid, addImage, currentSnapshot, replaceScene, select } = useEditorScene();
 const history = useHistory();
 const fileInput = ref<HTMLInputElement | null>(null);
+const jsonInput = ref<HTMLInputElement | null>(null);
+const pngScale = ref<'1' | '2'>('1');
 
 function add(type: Exclude<ObjectType, 'image'>): void {
   addShape(type);
@@ -37,6 +43,33 @@ function onImageFile(e: Event): void {
   };
   reader.readAsDataURL(file);
 }
+
+function exportJSON(): void {
+  downloadText('scene.json', serializeScene(currentSnapshot()));
+}
+
+function onJSONFile(e: Event): void {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const snapshot = parseSceneFile(reader.result as string);
+      replaceScene(snapshot);
+      select(null);
+      history.commit(); // import is a single undoable step
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Import failed');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportPNG(): void {
+  downloadDataURL('scene.png', exportStagePNG(Number(pngScale.value) as 1 | 2));
+}
 </script>
 
 <template>
@@ -58,6 +91,16 @@ function onImageFile(e: Event): void {
     <div class="group">
       <button :disabled="!history.canUndo.value" @click="history.undo()" title="Undo">↶</button>
       <button :disabled="!history.canRedo.value" @click="history.redo()" title="Redo">↷</button>
+    </div>
+    <div class="group">
+      <button @click="exportJSON">JSON ⇩</button>
+      <button @click="jsonInput?.click()">JSON ⇧</button>
+      <input ref="jsonInput" type="file" accept=".json,application/json" hidden @change="onJSONFile" />
+      <select v-model="pngScale" title="PNG scale">
+        <option value="1">1x</option>
+        <option value="2">2x</option>
+      </select>
+      <button @click="exportPNG">PNG ⇩</button>
     </div>
   </header>
 </template>
@@ -102,5 +145,12 @@ function onImageFile(e: Event): void {
   gap: 6px;
   font-size: 13px;
   cursor: pointer;
+}
+.toolbar select {
+  height: 30px;
+  background: var(--bp-charcoal);
+  color: var(--bp-offwhite);
+  border: 1px solid var(--bp-border);
+  border-radius: 4px;
 }
 </style>
