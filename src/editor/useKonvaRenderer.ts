@@ -1,13 +1,17 @@
 import Konva from 'konva';
 import { watch } from 'vue';
+import { round2 } from './objects';
+import { applyTransform } from './transform';
 import { ARTBOARD } from './types';
 import type { SceneObject } from './types';
 import { useEditorScene } from './useEditorScene';
+import { useHistory } from './useHistory';
 
 let stage: Konva.Stage | null = null;
 let gridGroup: Konva.Group;
 let contentLayer: Konva.Layer;
 let overlayLayer: Konva.Layer;
+let transformer: Konva.Transformer;
 
 const nodes = new Map<string, Konva.Shape>();
 // A node is "gesturing" while the user drags/transforms it; model→node sync
@@ -58,14 +62,9 @@ function createNode(obj: SceneObject): Konva.Shape {
   }
 }
 
-/** Extended in Task 6 with gesture handlers. */
-function attachEvents(_node: Konva.Shape): void {}
-
-/** Extended in Task 6 with Transformer sync. */
-function syncSelection(): void {}
-
 export function mountRenderer(container: HTMLDivElement): () => void {
-  const { state } = useEditorScene();
+  const { state, select, updateObject, replaceObject } = useEditorScene();
+  const history = useHistory();
 
   stage = new Konva.Stage({
     container,
@@ -83,6 +82,85 @@ export function mountRenderer(container: HTMLDivElement): () => void {
   contentLayer = new Konva.Layer();
   overlayLayer = new Konva.Layer();
   stage.add(gridLayer, contentLayer, overlayLayer);
+
+  transformer = new Konva.Transformer({
+    rotateEnabled: true,
+    borderStroke: '#4CAF50',
+    anchorStroke: '#256325',
+    anchorFill: '#ffffff',
+    anchorSize: 9,
+  });
+  overlayLayer.add(transformer);
+
+  stage.on('click tap', (e) => {
+    if (e.target === stage) {
+      select(null);
+      return;
+    }
+    const id = e.target.id();
+    const obj = state.objects.find((o) => o.id === id);
+    if (obj && !obj.locked) select(id);
+  });
+
+  function attachEvents(node: Konva.Shape): void {
+    node.on('dragstart', () => gesturing.add(node.id()));
+
+    node.on('dragmove', () => {
+      if (!state.grid.enabled) return;
+      const s = state.grid.size;
+      node.position({
+        x: Math.round(node.x() / s) * s,
+        y: Math.round(node.y() / s) * s,
+      });
+    });
+
+    node.on('dragend', () => {
+      gesturing.delete(node.id());
+      updateObject(node.id(), { x: round2(node.x()), y: round2(node.y()) });
+      history.commit();
+    });
+
+    node.on('transformstart', () => gesturing.add(node.id()));
+
+    node.on('transformend', () => {
+      gesturing.delete(node.id());
+      const obj = state.objects.find((o) => o.id === node.id());
+      if (!obj) return;
+      const patch = {
+        x: node.x(),
+        y: node.y(),
+        rotation: node.rotation(),
+        scaleX: node.scaleX(),
+        scaleY: node.scaleY(),
+      };
+      // Reset node scale BEFORE the model commit so the reconcile pass
+      // never renders double-scaled geometry.
+      node.scale({ x: 1, y: 1 });
+      replaceObject(obj.id, applyTransform(obj, patch));
+      history.commit();
+    });
+  }
+
+  function syncSelection(): void {
+    const sel = state.objects.find((o) => o.id === state.selectedId);
+    const node = sel ? nodes.get(sel.id) : undefined;
+    if (state.selectedId && !sel) {
+      // Selected object vanished (undo/redo/import) — clear selection.
+      select(null);
+    }
+    if (!sel || !node || !sel.visible || sel.locked) {
+      transformer.nodes([]);
+      return;
+    }
+    const uniform = sel.type === 'circle' || sel.type === 'text';
+    transformer.setAttrs({
+      enabledAnchors: uniform
+        ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+        : ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'],
+      keepRatio: uniform,
+    });
+    transformer.nodes([node]);
+  }
 
   function drawGrid(): void {
     gridGroup.destroyChildren();
@@ -162,11 +240,13 @@ export function exportStagePNG(pixelRatio: 1 | 2): string {
   overlayLayer.visible(false);
   stage.scale({ x: 1, y: 1 });
   stage.size({ width: ARTBOARD.width, height: ARTBOARD.height });
-  const url = stage.toDataURL({ pixelRatio });
-  gridGroup.visible(true);
-  overlayLayer.visible(true);
-  stage.scale({ x: prev.scale, y: prev.scale });
-  stage.size({ width: prev.width, height: prev.height });
-  stage.batchDraw();
-  return url;
+  try {
+    return stage.toDataURL({ pixelRatio });
+  } finally {
+    gridGroup.visible(true);
+    overlayLayer.visible(true);
+    stage.scale({ x: prev.scale, y: prev.scale });
+    stage.size({ width: prev.width, height: prev.height });
+    stage.batchDraw();
+  }
 }

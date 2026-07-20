@@ -1,11 +1,35 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 import EditorCanvas from './components/EditorCanvas.vue';
 import EditorToolbar from './components/EditorToolbar.vue';
+import { useEditorScene } from './editor/useEditorScene';
 import { useHistory } from './editor/useHistory';
 
 const history = useHistory();
-onMounted(() => history.resetHistory());
+const { state, removeObject } = useEditorScene();
+
+function onKeydown(e: KeyboardEvent): void {
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedId) {
+    e.preventDefault();
+    removeObject(state.selectedId);
+    history.commit();
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) history.redo();
+    else history.undo();
+  }
+}
+
+onMounted(() => {
+  history.resetHistory();
+  window.addEventListener('keydown', onKeydown);
+});
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
